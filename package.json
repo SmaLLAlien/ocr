@@ -20,6 +20,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.112.3",
+    "js-tiktoken": "^1.0.21",
+    "openai": "^6.48.0",
     "zod": "^3.24.0"
   },
   "devDependencies": {

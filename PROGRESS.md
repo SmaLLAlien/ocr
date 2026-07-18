@@ -5,8 +5,8 @@
 
 ## Текущее состояние
 
-**Веха:** M1 завершена (2026-07-18). Скелет собран, `ocr version` / `ocr llm providers` работают, ассеты скопированы и проверены пофайловым `cmp` на байтовую идентичность.
-**Следующий шаг:** M2.1 — `src/config/appConfig.ts` (чтение `~/.opencodereview/config.json`), затем M2.2 построчный порт `internal/llm/resolver.go`.
+**Веха:** M2 завершена (2026-07-18). LLM-слой работает: `ocr llm test` успешно прошёл против реального провайдера из пользовательского `~/.opencodereview/config.json` (Gemini через OpenAI-совместимый эндпоинт) — полный путь config → resolver → OpenAI-клиент → live-ответ. Негативные кейсы резолвера (нет конфига; невалидный `OCR_LLM_TIMEOUT`) дают Go-идентичные сообщения об ошибках.
+**Следующий шаг:** M3.1 — `src/util/path.ts` + `src/util/logger.ts`, затем git-runner и diff-слой.
 **Важно:** Go-тулчейн на машине НЕ установлен — сверка с Go-версией делается по исходникам эталона (и по уже установленному поведению), а не запуском Go-бинарника.
 
 ---
@@ -27,16 +27,16 @@
 - [x] M1.6 Рабочие `ocr version`, `ocr llm providers`, `ocr llm` (usage), обработка unknown command (stderr `Error: …`, exit 1). Таблица провайдеров — свой мини-tabwriter (`src/cli/table.ts`).
 - **Сверка:** вывод `llm providers` сверен со строками-источниками `llm_cmd.go` + `providers.go` (Go-бинарник собрать нельзя — нет тулчейна); 15 провайдеров, сортировка по имени, формат колонок совпадает.
 
-## M2 — `ocr llm test` (~1 день)
+## M2 — `ocr llm test` (~1 день) — ✅ ЗАВЕРШЕНА
 
-- [ ] M2.1 `src/config/appConfig.ts` — чтение `~/.opencodereview/config.json`, `OCR_CONFIG_PATH` (только чтение). Эталон: `cmd/opencodereview/config_cmd.go` (типы Config/ProviderEntry/LlmConfig).
-- [ ] M2.2 `src/llm/resolver.ts` — **построчный порт** `internal/llm/resolver.go`: приоритет config → `OCR_LLM_*` → `ANTHROPIC_*` → shell rc (`~/.zshrc`, `~/.bashrc`, `~/.bash_profile`, `~/.profile`); оверрайды `OCR_LLM_TIMEOUT`, `OCR_LLM_EXTRA_HEADERS`; `OCR_USE_ANTHROPIC` default true; срез суффикса `[Nm]`; нормализация URL (`/v1/messages` vs `/chat/completions`); запрет резервных заголовков.
-- [ ] M2.3 `src/llm/tokens.ts` — js-tiktoken (`cl100k_base`; `o200k_base` для o1/o3/o4), кэш энкодеров, fallback `bytes/4`.
-- [ ] M2.4 `src/llm/anthropic.ts` — MaxTokens default 8192, auth `authorization`|`x-api-key`, cache_control ephemeral на последний system-блок и последний тул, thinking → reasoning_content, кэш-токены суммируются в prompt_tokens. Эталон: `internal/llm/client.go`.
-- [ ] M2.5 `src/llm/openai.ts` — `max_completion_tokens`, extra_body в теле, `reasoning_content` из extra-полей, maxRetries 5, User-Agent `open-code-review/<version>`.
-- [ ] M2.6 `src/llm/usage.ts` — dot-пути извлечения usage + правило кэш-токенов Anthropic vs OpenAI. Эталон: `internal/llm/usage_resolver.go`.
-- [ ] M2.7 Команды `ocr llm test` (таймаут 30с, max_tokens 2048) и вывод source/URL/model/response.
-- **Сверка:** `ocr llm test` на реальном провайдере даёт тот же source/URL/model, что Go-версия, при одинаковых env/config.
+- [x] M2.1 `src/config/appConfig.ts` — типы AppConfig/ProviderEntry/LlmConfig/MCPServerConfig, `defaultConfigPath`, `resolveConfigPath` (OCR_CONFIG_PATH только чтение), `loadAppConfig`/`loadOrCreateConfig`/`saveConfig` (0600).
+- [x] M2.2 `src/llm/resolver.ts` — построчный порт `internal/llm/resolver.go`: 4 стратегии в порядке приоритета, все env-переменные, глобальные оверрайды `OCR_LLM_TIMEOUT`/`OCR_LLM_EXTRA_HEADERS`, срез `[Nm]`, `ensureMessagesSuffix`, `normalizeAuthHeader`, `parseExtraHeaders` (+ запрет резервных заголовков), Go-идентичные тексты ошибок.
+- [x] M2.3 `src/llm/tokens.ts` — js-tiktoken/lite с lazy-require ранков (cl100k_base; o200k_base для o1/o3/o4), кэш, fallback `bytes/4`. API синхронный, как в Go.
+- [x] M2.4 `src/llm/anthropic.ts` — @anthropic-ai/sdk: max_tokens default 8192, auth authorization/x-api-key/кастомный заголовок (с удалением конфликтующих), cache_control ephemeral на последний system-блок и последний тул, буферизация tool-результатов в user-сообщение, thinking → reasoning_content, кэш-токены суммируются в prompt_tokens.
+- [x] M2.5 `src/llm/openai.ts` — SDK openai: нормализация URL до `/chat/completions`, `max_completion_tokens`, extraBody merge в params (SDK passthrough), `reasoning_content` из нестандартного поля, maxRetries 5, User-Agent.
+- [x] M2.6 `src/llm/usage.ts` — порт usage_resolver.go: те же dot-пути, правило кэш-токенов Anthropic (индексы < 3) vs OpenAI.
+- [x] M2.7 `ocr llm test` — резолв, applyLanguage, таймаут из task.json (120с) / 30с default, maxTokens 2048, вывод Source/URL/Model/контент/✓.
+- **Сверка:** live-прогон против реального провайдера пользователя (OpenAI-протокол) успешен; негативные кейсы (отсутствие конфига, невалидный OCR_LLM_TIMEOUT) — Go-идентичные ошибки. Anthropic-путь проверен типами/по исходнику, live-прогона не было (нет anthropic-эндпоинта под рукой) — перепроверить при первом review-прогоне.
 
 ## M3 — `ocr review --preview` + `ocr rules check` (~1.5 дня)
 
