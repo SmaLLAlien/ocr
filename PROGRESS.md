@@ -5,8 +5,9 @@
 
 ## Текущее состояние
 
-**Веха:** M2 завершена (2026-07-18). LLM-слой работает: `ocr llm test` успешно прошёл против реального провайдера из пользовательского `~/.opencodereview/config.json` (Gemini через OpenAI-совместимый эндпоинт) — полный путь config → resolver → OpenAI-клиент → live-ответ. Негативные кейсы резолвера (нет конфига; невалидный `OCR_LLM_TIMEOUT`) дают Go-идентичные сообщения об ошибках.
-**Следующий шаг:** M3.1 — `src/util/path.ts` + `src/util/logger.ts`, затем git-runner и diff-слой.
+**Веха:** M3 завершена (2026-07-18). `ocr review --preview` работает во всех трёх режимах (workspace с синтезом untracked, commit, range с merge-base), `ocr rules check` резолвит правила по слоям, защита от ref-инъекции на месте. Проверено на эталонном Go-репозитории.
+**Следующий шаг:** M4.1 — `src/config/template.ts` + `toolsconfig.ts`, затем инструменты, tool-loop, сессии и полный `ocr review`. Это самая большая веха (~3–4 дня).
+**Примечания для M4:** logger (принтеры ▶/✔/✘) из M3.1 ещё НЕ сделан — понадобится в M4 вместе с tool-loop. `cli/shared.ts` содержит только пре-LLM половину shared.go; llmRuntime-половину (loadLLMRuntime) добавить в M4. В `cli/review.ts` заглушка «not implemented (M4)» для не-preview пути; background/--background-file обработка тоже отложена в M4.
 **Важно:** Go-тулчейн на машине НЕ установлен — сверка с Go-версией делается по исходникам эталона (и по уже установленному поведению), а не запуском Go-бинарника.
 
 ---
@@ -38,18 +39,18 @@
 - [x] M2.7 `ocr llm test` — резолв, applyLanguage, таймаут из task.json (120с) / 30с default, maxTokens 2048, вывод Source/URL/Model/контент/✓.
 - **Сверка:** live-прогон против реального провайдера пользователя (OpenAI-протокол) успешен; негативные кейсы (отсутствие конфига, невалидный OCR_LLM_TIMEOUT) — Go-идентичные ошибки. Anthropic-путь проверен типами/по исходнику, live-прогона не было (нет anthropic-эндпоинта под рукой) — перепроверить при первом review-прогоне.
 
-## M3 — `ocr review --preview` + `ocr rules check` (~1.5 дня)
+## M3 — `ocr review --preview` + `ocr rules check` (~1.5 дня) — ✅ ЗАВЕРШЕНА
 
-- [ ] M3.1 `src/util/path.ts` (`canonicalPath`, `withinBase`) и `src/util/logger.ts` (принтеры `▶/✔/✘`, `[ocr] Summary:`, quiet-режим). Эталоны: `internal/pathutil`, `internal/telemetry/events.go` (только принтеры), `internal/stdout`.
-- [ ] M3.2 `src/git/runner.ts` — execa + p-limit(16), методы run/output/split. Эталон: `internal/gitcmd/runner.go`.
-- [ ] M3.3 `src/diff/git.ts` — 3 режима (workspace: `git diff HEAD` + untracked как синтетические ханки; commit: `git show`; range: merge-base), флаги `--no-ext-diff --no-textconv --find-renames -U3 --end-of-options`, упрощённый `.gitignore`-матчинг, `ExcludedDirs`. Эталон: `internal/diff/git.go`.
-- [ ] M3.4 `src/diff/parser.ts` + `src/diff/hunk.ts` — свой парсер unified diff (НЕ parse-diff), `finalizeDiff` (NewFileContent через `git show ref:path` / диск). Эталоны: `internal/diff/parser.go`, `hunk.go`.
-- [ ] M3.5 `src/diff/workspaceFile.ts` — защищённое чтение (traversal/symlink-guard). Эталон: `internal/diff/workspace_file.go`.
-- [ ] M3.6 `src/config/allowlist.ts` — picomatch, nocase; расширения + default-exclude. Эталон: `internal/config/allowlist`.
-- [ ] M3.7 `src/config/rules.ts` — слоёный резолвер custom → project (`<repo>/.opencodereview/rule.json`) → global (`~/.opencodereview/rule.json`) → system; first-match-wins с сохранением порядка ключей; `merge_system_rule`; guard'ы файла-правила (расширения .md/.txt/.markdown, 512 КБ, traversal). Эталон: `internal/config/rules/system_rules.go`.
-- [ ] M3.8 `src/agent/preview.ts` + рендер превью (`statusBadge` A/M/D/R/B/S) + валидация refs (запрет `-…`, `git rev-parse --verify --end-of-options`).
-- [ ] M3.9 Команды: `ocr review --preview` (все режимы), `ocr rules check <file>`.
-- **Сверка:** `--preview` и `rules check` на эталонном репо дают идентичный Go-версии результат.
+- [x] M3.1 `src/util/path.ts` (canonicalPath, withinBase) + `src/util/semaphore.ts` (свой семафор вместо p-limit) + `src/util/glob.ts` (picomatch-обёртки: globMatch = doublestar, simpleMatch = filepath.Match, expandBraces). ⚠️ logger отложен в M4.
+- [x] M3.2 `src/git/runner.ts` — GitRunner на child_process.spawn + Semaphore(16); run (combined, {out, ok}) / output (stdout, throws) / runSplit. `src/cli/git.ts` — синхронные хелперы (spawnSync) для валидаций.
+- [x] M3.3 `src/diff/git.ts` — DiffProvider: 3 режима, те же git-флаги, `.gitignore`-матчинг (directory-only/basename/full-path, negation ignored), ExcludedDirs, фильтрация диффов, синтез all-added ханков для untracked.
+- [x] M3.4 `src/diff/parser.ts` (парсер заголовков, rename from/to как авторитетный путь, счёт insertions/deletions, finalizeDiff через `git show ref:path` c 2-мин таймаутом) + `src/diff/hunk.ts` (парсер @@-блоков).
+- [x] M3.5 `src/diff/workspaceFile.ts` — все guard'ы из оригинала (abs-запрет, withinBase ×3, symlink → target text).
+- [x] M3.6 `src/config/allowlist.ts` — lazy-init, case-insensitive.
+- [x] M3.7 `src/config/rules.ts` — слоёный резолвер; порядок ключей path_rule_map сохраняется нативно JSON.parse; merge_system_rule; file-ref правила (.md/.txt/.markdown, 512КБ, traversal-guard, warnings в stderr).
+- [x] M3.8 `src/agent/preview.ts` (loadDiffs/whyExcluded/buildPreview/diffStatus/extFromPath) + `src/cli/output.ts` (outputPreviewText, statusBadge, sanitizeTerminal) + validateReviewRefs в `src/cli/review.ts`.
+- [x] M3.9 `src/cli/flags.ts` — OcrFlagSet (порт Go flag: --name/-name, =value, короткие флаги, стоп на первом позиционном) + parseReviewFlags со всеми валидациями; команды review (preview-путь) и rules check подключены в диспетчер.
+- **Сверка (на эталонном Go-репо):** workspace-превью (untracked → added +276, excluded unsupported_ext), commit-превью (binary excluded), range-превью 21 файл через merge-base, rules check (default для .go, `**/*.{ts,js,tsx,jsx}` для .tsx, `**/pom.xml`), ref-инъекция `--commit "--upload-pack=evil"` отвергнута с Go-идентичным сообщением.
 
 ## M4 — Полный `ocr review` (~3–4 дня, ядро)
 

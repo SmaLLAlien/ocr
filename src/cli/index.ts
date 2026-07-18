@@ -3,6 +3,8 @@
 // not ported).
 import { printVersion } from './version.js';
 import { runLLM } from './llm.js';
+import { runReview } from './review.js';
+import { runRules } from './rules.js';
 
 function notImplemented(cmd: string, milestone: string): never {
   throw new Error(`'ocr ${cmd}' is not implemented yet (${milestone} of the TypeScript port)`);
@@ -24,7 +26,7 @@ async function dispatch(): Promise<void> {
       return;
     case 'review':
     case 'r':
-      return notImplemented('review', 'M3/M4');
+      return runReview(args.slice(1));
     case 'scan':
     case 's':
       return notImplemented('scan', 'M5');
@@ -33,7 +35,7 @@ async function dispatch(): Promise<void> {
     case 'llm':
       return runLLM(args.slice(1));
     case 'rules':
-      return notImplemented('rules', 'M3');
+      return runRules(args.slice(1));
     case 'session':
     case 'sessions':
       return notImplemented('session', 'M6');
