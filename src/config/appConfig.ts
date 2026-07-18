@@ -35,6 +35,18 @@ export interface LlmConfig {
   extra_headers?: Record<string, string>;
 }
 
+/**
+ * Telemetry settings. Accepted for config-file compatibility with the Go
+ * version; the TS port has no OpenTelemetry integration, so they are stored
+ * but have no runtime effect.
+ */
+export interface TelemetryConfig {
+  enabled?: boolean;
+  exporter?: string;
+  otlp_endpoint?: string;
+  content_logging?: boolean;
+}
+
 /** The user-level configuration file (~/.opencodereview/config.json). */
 export interface AppConfig {
   provider?: string;
@@ -43,6 +55,7 @@ export interface AppConfig {
   custom_providers?: Record<string, ProviderEntry>;
   llm?: LlmConfig;
   language?: string;
+  telemetry?: TelemetryConfig;
   mcp_servers?: Record<string, MCPServerConfig>;
 }
 

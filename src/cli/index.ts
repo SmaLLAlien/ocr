@@ -6,10 +6,8 @@ import { runLLM } from './llm.js';
 import { runReview } from './review.js';
 import { runScan } from './scan.js';
 import { runRules } from './rules.js';
-
-function notImplemented(cmd: string, milestone: string): never {
-  throw new Error(`'ocr ${cmd}' is not implemented yet (${milestone} of the TypeScript port)`);
-}
+import { runConfig } from './config.js';
+import { runSession } from './session.js';
 
 async function dispatch(): Promise<void> {
   const args = process.argv.slice(2);
@@ -32,14 +30,14 @@ async function dispatch(): Promise<void> {
     case 's':
       return runScan(args.slice(1));
     case 'config':
-      return notImplemented('config', 'M6');
+      return runConfig(args.slice(1));
     case 'llm':
       return runLLM(args.slice(1));
     case 'rules':
       return runRules(args.slice(1));
     case 'session':
     case 'sessions':
-      return notImplemented('session', 'M6');
+      return runSession(args.slice(1));
     case '-h':
     case '--help':
       printTopLevelUsage();

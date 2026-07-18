@@ -29,6 +29,8 @@ import {
 import { getCommitMessage, runGitCmd } from './git.js';
 import { loadBackgroundFile, mergeBackground } from './backgroundFile.js';
 import { outputPreviewText } from './output.js';
+import { collectToolDefs, initMCPClients } from '../mcp/registry.js';
+import { VERSION } from './version.js';
 
 export async function runReview(args: string[]): Promise<void> {
   const opts = parseReviewFlags(args);
@@ -69,7 +71,10 @@ export async function runReview(args: string[]): Promise<void> {
   const fileReader = new FileReader(cc.repoDir, mode, ref, cc.gitRunner);
   const tools = buildToolRegistry(rt.collector, fileReader);
 
-  // MCP clients: M6. Built-in tools only for now.
+  const mcpClients = await initMCPClients(rt.appCfg, tools, cc.repoDir, VERSION);
+  const mcpToolDefs = collectToolDefs(mcpClients, tools);
+  rt.planToolDefs.push(...mcpToolDefs);
+  rt.mainToolDefs.push(...mcpToolDefs);
 
   const ag = new ReviewAgent({
     repoDir: cc.repoDir,
@@ -99,22 +104,30 @@ export async function runReview(args: string[]): Promise<void> {
   const q = new QuietHandle(opts.outputFormat, opts.audience);
   const startTime = Date.now();
 
-  let comments;
   try {
-    comments = await ag.run();
-  } catch (err) {
-    q.restore();
-    const id = ag.sessionID();
-    if (id !== '') {
-      process.stderr.write(`[ocr] Session: ${id} (retry with: --resume ${id})\n`);
+    let comments;
+    try {
+      comments = await ag.run();
+    } catch (err) {
+      q.restore();
+      const id = ag.sessionID();
+      if (id !== '') {
+        process.stderr.write(`[ocr] Session: ${id} (retry with: --resume ${id})\n`);
+      }
+      throw new Error(`review failed: ${(err as Error).message}`);
     }
-    throw new Error(`review failed: ${(err as Error).message}`);
-  }
 
-  try {
-    emitRunResult(ag, comments, startTime, opts.outputFormat, opts.audience, q);
+    try {
+      emitRunResult(ag, comments, startTime, opts.outputFormat, opts.audience, q);
+    } finally {
+      q.restore();
+    }
   } finally {
-    q.restore();
+    for (const mc of mcpClients) {
+      await mc.close().catch((err: Error) => {
+        process.stderr.write(`[ocr] WARNING: failed to close MCP server ${JSON.stringify(mc.name())}: ${err.message}\n`);
+      });
+    }
   }
 }
 

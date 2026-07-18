@@ -21,6 +21,8 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.112.3",
+    "@clack/prompts": "^1.7.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "js-tiktoken": "^1.0.21",
     "openai": "^6.48.0",
     "picomatch": "^4.0.5",

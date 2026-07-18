@@ -5,9 +5,9 @@
 
 ## Текущее состояние
 
-**Веха:** M5 завершена (2026-07-18). `ocr scan` работает end-to-end: превью с [S]-бейджами, живой скан файла выдал реальную находку с suggestion-диффом (ANSI-рендер работает) и Project Summary (PLAN → MAIN → code_comment → резолв строк по file_content → PROJECT_SUMMARY_TASK). Это же закрыло вопрос из M4 — живые findings наблюдались, рендер комментариев проверен.
-**Следующий шаг:** M6.1 — `ocr config set/unset` (полное пространство ключей), затем @clack/prompts setup, session list/show, живой resume, MCP.
-**Примечания:** `--resume` реализован, но живьём не прогнан. Anthropic-протокол без живого прогона. Dedup-фаза скана не срабатывала живьём (нужно ≥2 комментариев в батче).
+**Веха:** M6 завершена (2026-07-18). config set/unset (проверено в изолированном HOME), session list/show (таблицы/JSON), живой resume («reusing 6, reviewing 5» по fingerprint; принтеры ▶/✔ и кэш-учёт cache(read:~18K) наблюдались), MCP-клиенты подключены в review, интерактивный setup на @clack/prompts реализован.
+**Следующий шаг:** M7 — упаковка (bin ocr, README), финальный чек-лист контрактов из PLAN.md Часть 4.
+**Не проверено живьём (кандидаты на M7):** интерактивный `config provider`/`config model` (нужен TTY); MCP с реальным сервером; anthropic-протокол; scan dedup-фаза (нужно ≥2 комментариев в батче).
 **Важно:** Go-тулчейн на машине НЕ установлен — сверка с Go-версией делается по исходникам эталона (и по уже установленному поведению), а не запуском Go-бинарника.
 
 ---
@@ -77,14 +77,14 @@
 - [x] M5.4 `src/cli/scan.ts` — все флаги и валидации, отдельный scan-шаблон, --batch override, скрытие file_read_diff из tool defs, workspace FileReader.
 - **Сверка (live):** превью корректно (тест-файл исключён default_path); скан `internal/pathutil/path.go` дал находку с suggestion-диффом и Project Summary.
 
-## M6 — Конфиг, сессии, MCP (~1.5–2 дня)
+## M6 — Конфиг, сессии, MCP (~1.5–2 дня) — ✅ ЗАВЕРШЕНА
 
-- [ ] M6.1 `ocr config set/unset` — полное пространство ключей (provider, model, providers.*, custom_providers.*, mcp_servers.*, llm.*, language; БЕЗ telemetry.*), запись 0600. Эталон: `cmd/opencodereview/config_cmd.go`.
-- [ ] M6.2 `ocr config provider` / `config model` — интерактив на @clack/prompts (пресет/кастом/manual → ключ (маска) → модель → сохранение → автотест соединения). Заменяет provider_tui.go.
-- [ ] M6.3 `ocr session list/show` (`--repo`, `--json`, `--limit`) — таблица/JSON. Эталон: `internal/session/list.go`, `cmd/opencodereview/session_cmd.go`.
-- [ ] M6.4 `--resume` — LoadResumeState (replay JSONL), ValidateOptions (только range/commit, совпадение диапазона), reuse по fingerprint. Эталон: `internal/session/resume.go`.
-- [ ] M6.5 `src/mcp/` — @modelcontextprotocol/sdk StdioClientTransport, setup-скрипты (`sh -c`/`cmd /c`), таймаут init 30с, allow-list `tools`, коллизии имён, некритичность падений. Эталоны: `internal/mcp/*`, `cmd/opencodereview/review_cmd.go` (initMCPClients).
-- [ ] M6.6 `--audience agent` / quiet-режим для `--format json`.
+- [x] M6.1 `src/cli/config.ts` — set/unset: полное пространство ключей ВКЛЮЧАЯ telemetry.* (решение: принимаются и сохраняются для совместимости, но эффекта не имеют — OTel не портирован); маскировка api_key/auth_token в выводе; provider→авто-создание entry; model→в entry активного провайдера; unset custom_providers/mcp_servers с очисткой активного. Проверено в изолированном HOME (USERPROFILE).
+- [x] M6.2 `src/cli/setup.ts` — @clack/prompts: official (пресет → ключ с env-fallback-подсказкой → модель) / custom / manual (legacy llm.*), после сохранения автотест соединения. ⚠️ Живой TTY-прогон не делался.
+- [x] M6.3 `src/session/list.ts` + `src/cli/session.ts` — list/ls/show, таблицы tabwriter-стиля, --json/--limit, статусы aborted/completed (N fail). Проверено на реальных сессиях.
+- [x] M6.4 `--resume` — живой прогон: reusing 6 / reviewing 5 по fingerprint, reused-комментарии в коллектор, повторные 429 снова записаны failed.
+- [x] M6.5 `src/mcp/` — client.ts (StdioClientTransport, init-таймаут 30с, env merge) + registry.ts (registerAll с allow-list и коллизиями, collectToolDefs, initMCPClients с setup-скриптами cmd /c / sh -c); подключено в review с закрытием клиентов в finally. ⚠️ С реальным MCP-сервером не прогонялось.
+- [x] M6.6 quiet-режим — реализован в M4 (QuietHandle), подтверждён в agent/json прогонах.
 
 ## M7 — Упаковка (~0.5 дня)
 
