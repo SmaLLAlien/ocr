@@ -5,9 +5,9 @@
 
 ## Текущее состояние
 
-**Веха:** M4 завершена (2026-07-18), кроме MCP (перенесён в M6 по плану). Полный `ocr review` работает end-to-end с реальным LLM: маленький коммит (1 файл, task_done за раунд), JSON-вывод по контрактной схеме, сессия JSONL с полной цепочкой записей и fingerprint-чекпоинтами. Большой коммит (11 файлов, конкурентность 8) упёрся в 429 бесплатного тарифа Gemini — это проверило изоляцию ошибок по файлам: упавшие записаны review_item_failed (резюмируемы), статус completed_with_errors, остальные файлы завершились.
-**Следующий шаг:** M5.1 — `src/scan/provider.ts` (enumerate через git ls-files / walk), затем batch/estimate/agent и команда scan.
-**Примечания:** живой прогон с комментариями (findings) ещё не наблюдался — модель gemini-2.5-flash на чистых коммитах честно молчит; проверить качество находок на заведомо багованном диффе в M7. `--resume` реализован, но живьём не прогнан (есть упавшие файлы от 429 — можно проверить на них). Anthropic-протокол по-прежнему без живого прогона.
+**Веха:** M5 завершена (2026-07-18). `ocr scan` работает end-to-end: превью с [S]-бейджами, живой скан файла выдал реальную находку с suggestion-диффом (ANSI-рендер работает) и Project Summary (PLAN → MAIN → code_comment → резолв строк по file_content → PROJECT_SUMMARY_TASK). Это же закрыло вопрос из M4 — живые findings наблюдались, рендер комментариев проверен.
+**Следующий шаг:** M6.1 — `ocr config set/unset` (полное пространство ключей), затем @clack/prompts setup, session list/show, живой resume, MCP.
+**Примечания:** `--resume` реализован, но живьём не прогнан. Anthropic-протокол без живого прогона. Dedup-фаза скана не срабатывала живьём (нужно ≥2 комментариев в батче).
 **Важно:** Go-тулчейн на машине НЕ установлен — сверка с Go-версией делается по исходникам эталона (и по уже установленному поведению), а не запуском Go-бинарника.
 
 ---
@@ -69,13 +69,13 @@
 - [x] M4.13 Полная команда review (все флаги, resume-валидации). ⚠️ MCP-клиенты не подключены (M6.5).
 - **Сверка (live, gemini-2.5-flash):** маленький коммит — полный цикл + task_done + сводка; `-f json` — схема-контракт соблюдена; session JSONL — session_start/llm_request/llm_response/review_item_done(fingerprint)/session_end; большой коммит — plan-фазы (1 выполнена), 429-и от квоты провайдера изолированы по файлам (review_item_failed, completed_with_errors).
 
-## M5 — `ocr scan` (~1.5 дня)
+## M5 — `ocr scan` (~1.5 дня) — ✅ ЗАВЕРШЕНА
 
-- [ ] M5.1 `src/scan/provider.ts` — enumerate (`git ls-files -z` tracked+untracked / walk + .gitignore), NUL-сниффинг бинарников (8000 байт), лимит 2 МиБ. Эталон: `internal/scan/provider.go`.
-- [ ] M5.2 `src/scan/batch.ts` (none/by-language/by-directory) + `estimate.ts` (константы 2000/7/700, humanTokens).
-- [ ] M5.3 `src/scan/agent.ts` — фильтры → отсев 80% токенов → оценка → батчи (последовательно, файлы параллельно) → PLAN/MAIN → DEDUP на батч → PROJECT_SUMMARY; `--max-tokens-budget`. Эталон: `internal/scan/agent.go`; шаблон `scan_template.json`.
-- [ ] M5.4 Команда `scan` со всеми флагами (`--path`, `--batch`, `--no-plan/--no-dedup/--no-summary`, `--max-tokens-budget`, `--preview`).
-- **Сверка:** `ocr scan --preview` идентичен Go; живой скан 2–3 файлов даёт вменяемые находки.
+- [x] M5.1 `src/scan/provider.ts` — enumerate (git ls-files -z tracked+untracked с dedup / walk + .gitignore), NUL-сниффинг (8000 байт), лимит 2 МиБ, нормализация --path, filterByPaths. Отличие от Go: gitLs использует stdout-only (в Go runner-ветка использует Run/combined — вероятный баг оригинала, взято безопасное поведение).
+- [x] M5.2 `src/scan/batch.ts` (none/by-language/by-directory, чанки BatchSize, сортировка ключей) + `estimate.ts` (2000/7/700, humanTokens, estimateFileTokens для budget look-ahead).
+- [x] M5.3 `src/scan/agent.ts` — полный конвейер: фильтры → 80%-отсев → оценка стоимости → батчи последовательно/файлы параллельно (Semaphore) → per-file budget gate → PLAN (formatPlanGuidance из JSON-чеклиста) → MAIN через общий LoopRunner (synthetic Diff для резолва строк) → DEDUP на батч (applyDedupGroups с полной проверкой покрытия id) → PROJECT_SUMMARY; preview.
+- [x] M5.4 `src/cli/scan.ts` — все флаги и валидации, отдельный scan-шаблон, --batch override, скрытие file_read_diff из tool defs, workspace FileReader.
+- **Сверка (live):** превью корректно (тест-файл исключён default_path); скан `internal/pathutil/path.go` дал находку с suggestion-диффом и Project Summary.
 
 ## M6 — Конфиг, сессии, MCP (~1.5–2 дня)
 

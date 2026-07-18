@@ -4,6 +4,7 @@
 import { printVersion } from './version.js';
 import { runLLM } from './llm.js';
 import { runReview } from './review.js';
+import { runScan } from './scan.js';
 import { runRules } from './rules.js';
 
 function notImplemented(cmd: string, milestone: string): never {
@@ -29,7 +30,7 @@ async function dispatch(): Promise<void> {
       return runReview(args.slice(1));
     case 'scan':
     case 's':
-      return notImplemented('scan', 'M5');
+      return runScan(args.slice(1));
     case 'config':
       return notImplemented('config', 'M6');
     case 'llm':
