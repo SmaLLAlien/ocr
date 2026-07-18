@@ -5,26 +5,27 @@
 
 ## Текущее состояние
 
-**Веха:** M1 не начата. Проект только инициализирован (git, docs).
-**Следующий шаг:** M1.1 — скаффолдинг package.json/tsconfig/tsup/commander.
+**Веха:** M1 завершена (2026-07-18). Скелет собран, `ocr version` / `ocr llm providers` работают, ассеты скопированы и проверены пофайловым `cmp` на байтовую идентичность.
+**Следующий шаг:** M2.1 — `src/config/appConfig.ts` (чтение `~/.opencodereview/config.json`), затем M2.2 построчный порт `internal/llm/resolver.go`.
+**Важно:** Go-тулчейн на машине НЕ установлен — сверка с Go-версией делается по исходникам эталона (и по уже установленному поведению), а не запуском Go-бинарника.
 
 ---
 
-## M1 — Скелет + `ocr llm providers` (~0.5 дня)
+## M1 — Скелет + `ocr llm providers` (~0.5 дня) — ✅ ЗАВЕРШЕНА
 
-- [ ] M1.1 Скаффолдинг: `package.json` (name `open-code-review-ts`, bin `ocr` → `dist/cli.js`), tsconfig strict ESM, tsup, eslint.
-- [ ] M1.2 Копирование ассетов из эталона (байт-в-байт) в `assets/`:
+- [x] M1.1 Скаффолдинг: `package.json` (name `open-code-review-ts`, bin `ocr` → `dist/cli.js`), tsconfig strict ESM, tsup. (eslint отложен — см. журнал решений.)
+- [x] M1.2 Копирование ассетов из эталона (байт-в-байт) в `assets/`:
   - `internal/config/template/prompts/*.md` → `assets/prompts/`
   - `internal/config/template/task_template.json`, `scan_template.json`
   - `internal/config/toolsconfig/tools.json`
   - `internal/config/rules/system_rules.json` + `rule_docs/` → `assets/rule_docs/`
   - `internal/config/allowlist/supported_file_types.json`, `default_exclude_patterns.json`
   - `internal/config/testconnection/task.json` → `assets/testconnection.json`
-- [ ] M1.3 `src/model/` — доменные типы + zod (эталон: `internal/model/*.go`; точные JSON-имена: `start_line`, `suggestion_code`, enum category/severity, `Preview.files`).
-- [ ] M1.4 `src/llm/providers.ts` — 16 пресетов 1-в-1 (эталон: `internal/llm/providers.go`).
-- [ ] M1.5 CLI-каркас: commander, все команды-заглушки (`review|r`, `scan|s`, `rules`, `config`, `llm`, `session|sessions`, `version`), `--version/-V`.
-- [ ] M1.6 Рабочие `ocr version` и `ocr llm providers`.
-- **Сверка:** вывод `ocr llm providers` идентичен Go-версии (`go run ./cmd/opencodereview llm providers` в эталоне).
+- [x] M1.3 `src/model/index.ts` — доменные типы + zod (эталон: `internal/model/*.go`; точные JSON-имена: `start_line`, `suggestion_code`, enum category/severity, `Preview.files`).
+- [x] M1.4 `src/llm/providers.ts` — 15 пресетов 1-в-1 (эталон: `internal/llm/providers.go`; в PLAN.md ошибочно указано 16 — в registry их 15).
+- [x] M1.5 CLI-каркас: ручной диспетчер как в `main.go` (НЕ commander — см. журнал), заглушки `review|r`, `scan|s`, `rules`, `config`, `session|sessions`; usage-тексты скопированы из `main.go`/`llm_cmd.go` (без строки viewer).
+- [x] M1.6 Рабочие `ocr version`, `ocr llm providers`, `ocr llm` (usage), обработка unknown command (stderr `Error: …`, exit 1). Таблица провайдеров — свой мини-tabwriter (`src/cli/table.ts`).
+- **Сверка:** вывод `llm providers` сверен со строками-источниками `llm_cmd.go` + `providers.go` (Go-бинарник собрать нельзя — нет тулчейна); 15 провайдеров, сортировка по имени, формат колонок совпадает.
 
 ## M2 — `ocr llm test` (~1 день)
 
@@ -101,3 +102,6 @@
 | 2026-07-18 | Не переносим: bubbletea TUI (→ @clack/prompts), web-viewer, OpenTelemetry (консольные принтеры прогресса сохраняем), npm-дистрибуцию бинарника, VSCode/plugins/pages. |
 | 2026-07-18 | Стек: commander, официальные SDK Anthropic/OpenAI, js-tiktoken, picomatch, @modelcontextprotocol/sdk, p-limit, execa, zod, tsup. |
 | 2026-07-18 | Три файла портируем построчно: diff/resolver, llmloop/compression, llm/resolver. Ассеты — байт-в-байт. |
+| 2026-07-18 | CLI — ручной диспетчер + свой мини-парсер флагов (зеркалим `main.go`/`flags.go`), commander НЕ используем: точное воспроизведение usage-текстов, сообщений об ошибках и семантики коротких флагов важнее удобства фреймворка. |
+| 2026-07-18 | eslint отложен: типобезопасность обеспечивает `tsc --noEmit` (strict + noUncheckedIndexedAccess); линтер добавим при необходимости в M7. |
+| 2026-07-18 | Go-тулчейна на машине нет → сверка поведения по исходникам эталона, а не прогоном Go-бинарника. |

@@ -1,0 +1,31 @@
+{
+  "name": "open-code-review-ts",
+  "version": "0.0.1",
+  "description": "AI-powered code review CLI (TypeScript port of alibaba/open-code-review)",
+  "license": "Apache-2.0",
+  "type": "module",
+  "bin": {
+    "ocr": "dist/cli.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "dist",
+    "assets"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsx src/cli/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsup": "^8.3.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}
