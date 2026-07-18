@@ -220,12 +220,21 @@ export class ScanAgent {
 
     this.currentDate = formatDate(new Date());
 
-    const comments = await this.dispatchSubtasks(signal);
+    // Mirror Go: even when dispatch fails, the summary hook (no-op without
+    // comments) and Finalize still run so the session gets session_end.
+    let comments: LlmComment[] = [];
+    let dispatchErr: Error | undefined;
+    try {
+      comments = await this.dispatchSubtasks(signal);
+    } catch (err) {
+      dispatchErr = err as Error;
+    }
 
     // Project-level summary runs after all batches; never blocks return.
     await this.maybeRunProjectSummary(comments, signal);
 
     this.session.finalize();
+    if (dispatchErr) throw dispatchErr;
     return comments;
   }
 

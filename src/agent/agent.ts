@@ -172,8 +172,18 @@ export class ReviewAgent {
 
     this.currentDate = formatDate(new Date());
 
-    const comments = await this.dispatchSubtasks(signal);
+    // Finalize even when dispatch fails (Go returns the error alongside and
+    // still calls Finalize), so the session gets its session_end record and
+    // stays resumable instead of showing as aborted.
+    let comments: LlmComment[] = [];
+    let dispatchErr: Error | undefined;
+    try {
+      comments = await this.dispatchSubtasks(signal);
+    } catch (err) {
+      dispatchErr = err as Error;
+    }
     this.session.finalize();
+    if (dispatchErr) throw dispatchErr;
     return comments;
   }
 

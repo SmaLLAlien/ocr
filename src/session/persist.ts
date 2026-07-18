@@ -1,6 +1,10 @@
 // JSONL session persistence. Port of internal/session/persist.go.
 // Records are chained via uuid/parentUuid; review_item_* records are the
 // resume checkpoints and are flushed immediately (here: written synchronously).
+//
+// This TS implementation is the canonical session format. Sessions written
+// by the original Go binary are NOT supported (same record/field layout, but
+// no cross-compatibility guarantee — see PROGRESS.md decision journal).
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -99,7 +103,7 @@ export class JsonlWriter {
       parentUuid: null,
       type: 'session_start',
       sessionId: this.sessionID,
-      timestamp: startTime.toISOString().replace(/\.\d{3}Z$/, 'Z'),
+      timestamp: startTime.toISOString(),
       cwd: this.repoDir,
       gitBranch: this.gitBranch,
       model: this.model,
@@ -311,5 +315,5 @@ export class JsonlWriter {
 }
 
 function nowISO(): string {
-  return new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+  return new Date().toISOString();
 }
