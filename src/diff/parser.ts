@@ -31,7 +31,10 @@ export async function parseDiffText(
 
   const flush = async (): Promise<void> => {
     if (!current) return;
-    current.diff = buf.join('\n').replace(/\n$/, '');
+    // Each buffered element already ends in '\n' (see buf.push below), so join
+    // with '' — joining with '\n' would double every newline, injecting phantom
+    // blank lines into the hunk and inflating resolved line numbers.
+    current.diff = buf.join('').replace(/\n$/, '');
     await finalizeDiff(current, repoDir, ref, runner, combined);
     diffs.push(current);
     buf = [];
