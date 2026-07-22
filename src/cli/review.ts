@@ -31,6 +31,8 @@ import { loadBackgroundFile, mergeBackground } from './backgroundFile.js';
 import { outputPreviewText } from './output.js';
 import { collectToolDefs, initMCPClients } from '../mcp/registry.js';
 import { VERSION } from './version.js';
+import { publishToGitLab, resolveGitLabTarget, type GitLabTarget } from '../publish/gitlab.js';
+import { resolveLineNumbers } from '../diff/resolver.js';
 
 export async function runReview(args: string[]): Promise<void> {
   const opts = parseReviewFlags(args);
@@ -39,8 +41,13 @@ export async function runReview(args: string[]): Promise<void> {
     return;
   }
 
+  console.log(opts, 'opts');
+
   // review path: git repo is required (diff concepts depend on it).
   const cc = loadCommonContext(opts.repoDir, opts.rulePath, opts.maxTools, opts.maxGitProcs, true);
+  console.log('***************************')
+  console.log(cc, 'cc')
+  console.log('***************************')
   applyCLIExcludes(cc, splitPaths(opts.excludes));
 
   // Security (#112): reject ref-option injection before any git invocation.
@@ -60,6 +67,12 @@ export async function runReview(args: string[]): Promise<void> {
 
   if (opts.preview) {
     return runPreview(cc, opts);
+  }
+
+  // Fail fast on incomplete GitLab settings BEFORE spending LLM tokens.
+  let gitlabTarget: GitLabTarget | undefined;
+  if (opts.gitlab) {
+    gitlabTarget = resolveGitLabTarget(opts);
   }
 
   const resumeState = loadReviewResumeState(cc.repoDir, opts);
@@ -117,10 +130,28 @@ export async function runReview(args: string[]): Promise<void> {
       throw new Error(`review failed: ${(err as Error).message}`);
     }
 
+    // Resolve line numbers once here: emitRunResult resolves on its own copy,
+    // so the GitLab publisher needs its own resolved view of the comments.
+    const resolved = resolveLineNumbers(comments, ag.diffs);
+
     try {
-      emitRunResult(ag, comments, startTime, opts.outputFormat, opts.audience, q);
+      emitRunResult(ag, resolved, startTime, opts.outputFormat, opts.audience, q);
     } finally {
       q.restore();
+    }
+
+    if (gitlabTarget) {
+      try {
+        const res = await publishToGitLab(gitlabTarget, resolved);
+        const failedNote = res.failed > 0 ? `, ${res.failed} failed` : '';
+        process.stderr.write(
+          `[ocr] GitLab: опубликовано ${res.inline} инлайн + ${res.general} общих комментариев${failedNote} (MR !${gitlabTarget.mrIid})\n`,
+        );
+      } catch (err) {
+        // Publishing must not swallow the already-printed review results.
+        process.stderr.write(`[ocr] GitLab: публикация не удалась: ${(err as Error).message}\n`);
+        process.exitCode = 1;
+      }
     }
   } finally {
     for (const mc of mcpClients) {

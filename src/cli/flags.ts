@@ -162,6 +162,10 @@ export interface ReviewOptions {
   maxTools: number;
   maxGitProcs: number;
   preview: boolean;
+  gitlab: boolean;
+  gitlabUrl: string;
+  gitlabProject: string;
+  gitlabMr: string;
   showHelp: boolean;
 }
 
@@ -186,6 +190,10 @@ export function parseReviewFlags(args: string[]): ReviewOptions {
   a.int('max-tools', 0);
   a.int('max-git-procs', 16);
   a.bool('preview', false, 'p');
+  a.bool('gitlab', false);
+  a.string('gitlab-url', '');
+  a.string('gitlab-project', '');
+  a.string('gitlab-mr', '');
 
   try {
     a.parse(args);
@@ -212,6 +220,10 @@ export function parseReviewFlags(args: string[]): ReviewOptions {
     maxTools: a.getInt('max-tools'),
     maxGitProcs: a.getInt('max-git-procs'),
     preview: a.getBool('preview'),
+    gitlab: a.getBool('gitlab'),
+    gitlabUrl: a.getString('gitlab-url'),
+    gitlabProject: a.getString('gitlab-project'),
+    gitlabMr: a.getString('gitlab-mr'),
     showHelp: a.showHelp,
   };
 
@@ -293,12 +305,21 @@ Examples:
   ocr review --background-file ./docs/requirements.md
   ocr review --background "Focus on auth" --background-file ./docs/requirements.md
 
+  # Publish comments to the GitLab MR (inside GitLab CI the CI_* env vars
+  # are picked up automatically; token from GITLAB_TOKEN / OCR_GITLAB_TOKEN)
+  ocr review --from origin/main --to $CI_COMMIT_SHA --gitlab
+  ocr review -c HEAD --gitlab --gitlab-url https://gitlab.com/api/v4 --gitlab-project 123 --gitlab-mr 45
+
 Flags:
   --audience string             output audience: human (show progress) or agent (summary only) (default "human")
   -b, --background string       optional requirement/business context for the review
   -B, --background-file string  path to a Markdown file used as review background (combined with --background; inline value appears first when both are set)
   -c, --commit string           single commit hash or tag to review (vs its parent)
   -f, --format string           output format: text or json (default "text")
+  --gitlab                      publish comments to a GitLab merge request after the review
+  --gitlab-url string           GitLab API v4 base URL (default: env CI_API_V4_URL)
+  --gitlab-project string       GitLab project id or URL-encoded path (default: env CI_PROJECT_ID)
+  --gitlab-mr string            merge request IID (default: env CI_MERGE_REQUEST_IID)
   --concurrency int             max concurrent file reviews (default 8)
   --max-git-procs int           max concurrent git subprocesses (default 16)
   --from string                 source ref to start diff from (e.g., 'main')

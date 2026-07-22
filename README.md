@@ -161,6 +161,11 @@ ocr review --from main --to feature-branch
 --tools string           свой tools.json вместо встроенного
 --repo string            корень репозитория (по умолчанию: текущая папка;
                          автоматически поднимается до корня git при запуске из подпапки)
+--gitlab                 опубликовать комментарии в GitLab MR после ревью
+--gitlab-url string      GitLab API v4 (по умолчанию: env CI_API_V4_URL)
+--gitlab-project string  id проекта или URL-encoded путь (по умолчанию: env CI_PROJECT_ID)
+--gitlab-mr string       IID merge request'а (по умолчанию: env CI_MERGE_REQUEST_IID)
+                         токен — только из env: OCR_GITLAB_TOKEN или GITLAB_TOKEN
 ```
 
 Особенности поведения:
@@ -517,10 +522,45 @@ Resume доступен для commit/range-режимов (workspace измен
 
 ## Использование в CI
 
-Универсальный паттерн (GitHub Actions / GitLab CI / любой):
+### GitLab — встроенная публикация (`--gitlab`)
+
+В GitLab CI достаточно одного флага: адрес API, проект и IID MR подхватываются из
+стандартных переменных пайплайна (`CI_API_V4_URL`, `CI_PROJECT_ID`,
+`CI_MERGE_REQUEST_IID`), токен — из `GITLAB_TOKEN` (или `OCR_GITLAB_TOKEN`).
+
+```yaml
+ocr-review:
+  image: node:22
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  variables:
+    OCR_LLM_URL: https://generativelanguage.googleapis.com/v1beta/openai/chat/completions
+    OCR_LLM_MODEL: gemini-2.5-flash
+    OCR_USE_ANTHROPIC: "false"
+  script:
+    - git fetch origin "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"
+    - git clone <url-репозитория-ocr> /tmp/ocr && (cd /tmp/ocr && npm ci && npm run build && npm link)
+    - export OCR_LLM_TOKEN="$GEMINI_KEY"          # секреты проекта (masked)
+    - export GITLAB_TOKEN="$OCR_BOT_TOKEN"        # PAT/Project token со scope api
+    - >
+      ocr review
+      --from "origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"
+      --to "$CI_COMMIT_SHA"
+      --audience agent --gitlab
+```
+
+Как публикуется: каждый комментарий сначала пробуем поставить **инлайн** в дифф MR
+(с нативным suggestion-блоком — кнопка «Apply suggestion»); если GitLab отверг
+позицию (строка не входит в дифф MR) или у комментария нет номера строки —
+комментарий публикуется **общей заметкой** с пометкой
+`📍 path:line — не удалось привязать комментарий к строке N в диффе MR, публикую как общий`.
+Неполные настройки (`--gitlab` без токена/MR) отсекаются **до** запуска ревью, чтобы
+не жечь LLM-токены впустую. Локально можно указать цель явно:
+`--gitlab-url … --gitlab-project … --gitlab-mr …`.
+
+### Другие платформы (JSON-паттерн)
 
 ```bash
-npm install -g <этот пакет либо npm link на checkout>
 export OCR_LLM_URL=...   OCR_LLM_TOKEN=$SECRET   OCR_LLM_MODEL=...
 export OCR_USE_ANTHROPIC=false        # если эндпоинт OpenAI-совместимый
 
