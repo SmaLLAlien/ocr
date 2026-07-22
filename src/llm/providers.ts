@@ -53,7 +53,7 @@ const registry: Provider[] = [
   },
   {
     name: 'dashscope',
-    displayName: 'Alibaba DashScope API',
+    displayName: 'DashScope API',
     protocol: 'openai',
     baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
     envVar: 'DASHSCOPE_API_KEY',
@@ -71,7 +71,7 @@ const registry: Provider[] = [
   },
   {
     name: 'dashscope-tokenplan',
-    displayName: 'Alibaba DashScope Token Plan API',
+    displayName: 'DashScope Token Plan API',
     protocol: 'openai',
     baseUrl: 'https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1',
     envVar: 'DASHSCOPE_TOKENPLAN_KEY',
