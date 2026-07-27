@@ -1,6 +1,6 @@
 # open-code-review-ts
 
-TypeScript-порт AI-код-ревью CLI `ocr` (оригинал на Go: `D:\Projects\alibaba\open-code-review` — **эталон, не изменять**, используется только для чтения и сверки поведения).
+TypeScript-порт AI-код-ревью CLI `ocr` (оригинал на Go: `D:\Projects\open-code-review` — **эталон, не изменять**, используется только для чтения и сверки поведения).
 
 Переносится ТОЛЬКО ядро: review диффов, scan файлов, LLM-слой, CLI и конфигурация.
 НЕ переносится: bubbletea TUI, web-viewer, OpenTelemetry, npm-дистрибуция Go-бинарника, тесты (`*_test.go`).
