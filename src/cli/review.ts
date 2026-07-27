@@ -41,13 +41,9 @@ export async function runReview(args: string[]): Promise<void> {
     return;
   }
 
-  console.log(opts, 'opts');
-
   // review path: git repo is required (diff concepts depend on it).
   const cc = loadCommonContext(opts.repoDir, opts.rulePath, opts.maxTools, opts.maxGitProcs, true);
-  console.log('***************************')
-  console.log(cc, 'cc')
-  console.log('***************************')
+  
   applyCLIExcludes(cc, splitPaths(opts.excludes));
 
   // Security (#112): reject ref-option injection before any git invocation.
