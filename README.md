@@ -408,7 +408,15 @@ ocr session show <id> [--json] [--repo dir]
 
 ### Провайдеры и модели
 
-Встроенные пресеты (`ocr llm providers`): `anthropic`, `openai`, `edenai`, `dashscope`, `dashscope-tokenplan`, `volcengine`, `deepseek`, `tencent-tokenhub`, `hy-tokenplan`, `kimi`, `z-ai`, `z-ai-coding`, `mimo`, `minimax`, `baidu-qianfan`. У каждого — base URL, протокол, env-переменная для ключа и список моделей.
+Встроенные пресеты (`ocr llm providers`): `anthropic`, `openai`, `gemini`, `edenai`, `dashscope`, `dashscope-tokenplan`, `volcengine`, `deepseek`, `tencent-tokenhub`, `hy-tokenplan`, `kimi`, `z-ai`, `z-ai-coding`, `mimo`, `minimax`, `baidu-qianfan`. У каждого — base URL, протокол, env-переменная для ключа и список моделей.
+
+Например, Google Gemini настраивается в три команды (или одной — `ocr config provider`):
+
+```bash
+ocr config set provider gemini
+ocr config set providers.gemini.api_key AIza...   # или просто export GEMINI_API_KEY=...
+ocr config set model gemini-2.5-flash
+```
 
 **Два протокола** (формата API): `openai` (Chat Completions — его поддерживает почти любой провайдер, включая Gemini через OpenAI-совместимый эндпоинт Google) и `anthropic` (Messages API — для api.anthropic.com и совместимых прокси; автоматически включается prompt caching через `cache_control: ephemeral`). Любой не-пресетный эндпоинт подключается через `custom_providers` с указанием протокола.
 
@@ -423,7 +431,7 @@ ocr session show <id> [--json] [--repo dir]
 
 Поверх любого источника действуют глобальные оверрайды: `OCR_LLM_TIMEOUT` (секунды), `OCR_LLM_EXTRA_HEADERS` (`key=value,key2="a,b"`; заголовки authorization/x-api-key/content-type/user-agent запрещены). Суффикс модели вида `[1m]` автоматически срезается. `OCR_CONFIG_PATH` подменяет путь конфига **только для чтения** (записи всегда идут в стандартный путь — защита от подмены).
 
-Ключи пресетов из env: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `DEEPSEEK_API_KEY`, `DASHSCOPE_API_KEY`, `MOONSHOT_API_KEY` и т.д. — используются, когда `api_key` в конфиге не задан.
+Ключи пресетов из env: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `DEEPSEEK_API_KEY`, `DASHSCOPE_API_KEY`, `MOONSHOT_API_KEY` и т.д. — используются, когда `api_key` в конфиге не задан.
 
 ### Свои правила ревью (rule.json)
 

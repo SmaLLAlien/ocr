@@ -52,6 +52,22 @@ const registry: Provider[] = [
     ],
   },
   {
+    // TS-port extension (not in the Go registry): Google Gemini through its
+    // OpenAI-compatible endpoint; Bearer-auth with a Google AI Studio key.
+    name: 'gemini',
+    displayName: 'Google Gemini API',
+    protocol: 'openai',
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
+    envVar: 'GEMINI_API_KEY',
+    models: [
+      'gemini-3.1-pro-preview',
+      'gemini-2.5-pro',
+      'gemini-2.5-flash',
+      'gemini-2.5-flash-lite',
+      'gemini-2.0-flash',
+    ],
+  },
+  {
     name: 'dashscope',
     displayName: 'DashScope API',
     protocol: 'openai',

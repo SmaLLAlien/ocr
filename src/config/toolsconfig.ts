@@ -1,6 +1,7 @@
 // Tool (function-calling) definitions. Port of internal/config/toolsconfig.
 import fs from 'node:fs';
 import { readAsset } from '../util/assets.js';
+import { stripBom } from '../util/text.js';
 import type { FunctionDef, ToolDef } from '../llm/types.js';
 
 /** A single tool definition loaded from tools.json. The definition field is
@@ -29,7 +30,7 @@ export function loadToolsConfig(path: string): ToolConfigEntry[] {
     }
   }
   try {
-    return JSON.parse(data) as ToolConfigEntry[];
+    return JSON.parse(stripBom(data)) as ToolConfigEntry[];
   } catch (err) {
     throw new Error(`unmarshal tools file: ${(err as Error).message}`);
   }

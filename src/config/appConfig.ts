@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { stripBom } from '../util/text.js';
 
 /** Configuration for a single MCP server (stdio transport). */
 export interface MCPServerConfig {
@@ -86,7 +87,7 @@ export function loadAppConfig(configPath: string): AppConfig | undefined {
     throw new Error(`read app config ${configPath}: ${(err as Error).message}`);
   }
   try {
-    return JSON.parse(data) as AppConfig;
+    return JSON.parse(stripBom(data)) as AppConfig;
   } catch (err) {
     throw new Error(`parse app config: ${(err as Error).message}`);
   }

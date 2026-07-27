@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { lookupProvider } from './providers.js';
+import { stripBom } from '../util/text.js';
 
 /** Resolved LLM endpoint configuration. */
 export interface ResolvedEndpoint {
@@ -224,7 +225,7 @@ function tryOCRConfig(configPath: string, modelOverride: string): StrategyResult
 
   let cfg: ConfigFileShape;
   try {
-    cfg = JSON.parse(data) as ConfigFileShape;
+    cfg = JSON.parse(stripBom(data)) as ConfigFileShape;
   } catch (err) {
     throw new Error(`parse config: ${errMsg(err)}`);
   }
