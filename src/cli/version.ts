@@ -10,5 +10,5 @@ export function printVersion(): void {
   line += ` ${process.platform}/${process.arch}`;
   console.log(line);
   if (BUILD_DATE) console.log(`built at: ${BUILD_DATE}`);
-  console.log('https://github.com/alibaba/open-code-review');
+  console.log('https://github.com/SmaLLAlien/ocr');
 }
