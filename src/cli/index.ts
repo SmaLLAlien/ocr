@@ -82,7 +82,7 @@ Use "ocr config" for more information about config.
 Use "ocr llm" for more information about LLM utilities.
 Use "ocr session -h" for more information about session inspection.
 
-GitHub: https://github.com/alibaba/open-code-review`);
+GitHub: https://github.com/SmaLLAlien/ocr`);
 }
 
 dispatch().catch((err: unknown) => {
