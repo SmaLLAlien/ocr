@@ -37,7 +37,7 @@ export function resolveGitLabTarget(flags: GitLabFlags): GitLabTarget {
   const apiUrl = (flags.gitlabUrl || env('CI_API_V4_URL')).replace(/\/+$/, '');
   const project = flags.gitlabProject || env('CI_PROJECT_ID');
   const mrIid = flags.gitlabMr || env('CI_MERGE_REQUEST_IID');
-  const token = env('OCR_GITLAB_TOKEN') || env('GITLAB_TOKEN');
+  const token = env('OCR_GITLAB_TOKEN') || env('PROJECT_ACCESS_TOKEN');
 
   const missing: string[] = [];
   if (apiUrl === '') missing.push('API URL (--gitlab-url или env CI_API_V4_URL)');
