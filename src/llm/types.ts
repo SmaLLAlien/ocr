@@ -65,6 +65,12 @@ export interface ToolCall {
   id: string;
   type: string;
   function: FunctionCall;
+  /**
+   * Vendor passthrough echoed back verbatim on the next turn. Gemini 3.x puts
+   * its thought_signature here (extra_content.google.thought_signature) and
+   * rejects follow-up requests with 400 INVALID_ARGUMENT if it is missing.
+   */
+  extra_content?: Record<string, unknown>;
 }
 
 export interface ResponseMessage {

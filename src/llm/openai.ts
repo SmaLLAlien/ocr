@@ -77,6 +77,8 @@ export class OpenAIClient implements LLMClient {
                 id: tc.id,
                 type: 'function' as const,
                 function: { name: tc.function.name, arguments: tc.function.arguments },
+                // Echoed verbatim: Gemini 3.x requires its thought_signature back.
+                ...(tc.extra_content ? { extra_content: tc.extra_content } : {}),
               })),
             });
           }
@@ -131,10 +133,15 @@ export class OpenAIClient implements LLMClient {
       const toolCalls: ToolCall[] = [];
       for (const tc of ch.message.tool_calls ?? []) {
         if (tc.type === 'function') {
+          // Preserve vendor extras (Gemini's thought_signature) for the next turn.
+          const extra = (tc as unknown as Record<string, unknown>)['extra_content'];
           toolCalls.push({
             id: tc.id,
             type: tc.type,
             function: { name: tc.function.name, arguments: tc.function.arguments },
+            ...(extra && typeof extra === 'object'
+              ? { extra_content: extra as Record<string, unknown> }
+              : {}),
           });
         }
       }
